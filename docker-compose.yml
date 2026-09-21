@@ -1,0 +1,16 @@
+services:
+  meetbot:
+    build: .
+    ports:
+      - "${PORT:-8765}:8765"
+    env_file:
+      - .env
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8765"
+    volumes:
+      - transcripts:/app/transcripts
+    restart: unless-stopped
+
+volumes:
+  transcripts:

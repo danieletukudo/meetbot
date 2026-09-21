@@ -1,0 +1,16 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+.env
+.env.*
+!.env.example
+transcripts
+.calendar_state.json
+.DS_Store
+meetbot
+.claude
+.idea
+.vscode
+*.md

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Meeting bot</title>
+    <style>
+      :root {
+        --paper: #f3eee4;
+        --ink: #1b1814;
+        --muted: #6b645b;
+        --line: #d9d0c3;
+        --card: #fffaf2;
+        --join: #1f4d3a;
+        --join-hover: #16382b;
+        --leave: #8a2e24;
+        --chip: #ece4d6;
+        --ok: #2f6b4f;
+        --wait: #9a6b12;
+        --bad: #8a2e24;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background:
+          radial-gradient(circle at top left, #fff 0, transparent 28%),
+          var(--paper);
+        color: var(--ink);
+        font: 16px/1.45 "Avenir Next", "Segoe UI", sans-serif;
+      }
+
+      main {
+        width: min(680px, calc(100% - 32px));
+        margin: 48px auto 64px;
+        display: grid;
+        gap: 18px;
+      }
+
+      header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        letter-spacing: -0.03em;
+      }
+
+      h2 {
+        margin: 0 0 10px;
+        font-size: 16px;
+      }
+
+      .rec {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      .rec i {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #c44536;
+        box-shadow: 0 0 0 0 rgba(196, 69, 54, 0.6);
+        animation: pulse 1.6s ease-out infinite;
+      }
+
+      @keyframes pulse {
+        70% {
+          box-shadow: 0 0 0 8px transparent;
+        }
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: 0 16px 40px rgba(54, 42, 24, 0.08);
+      }
+
+      label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      input {
+        width: 100%;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink);
+        border-radius: 12px;
+        padding: 12px 14px;
+        font: inherit;
+        outline: none;
+      }
+
+      input:focus {
+        border-color: var(--join);
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      @media (max-width: 560px) {
+        .row {
+          grid-template-columns: 1fr;
+        }
+
+        .join {
+          width: 100%;
+        }
+      }
+
+      .platforms {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 12px 0 18px;
+      }
+
+      .platforms span {
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: var(--chip);
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .platforms span.on {
+        background: #1f4d3a;
+        color: #f3eee4;
+      }
+
+      button {
+        border: 0;
+        border-radius: 12px;
+        padding: 12px 16px;
+        font: 600 15px/1 "Avenir Next", "Segoe UI", sans-serif;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .join {
+        background: var(--join);
+        color: #f7f3ea;
+      }
+
+      .join:hover:not(:disabled) {
+        background: var(--join-hover);
+      }
+
+      .leave {
+        background: transparent;
+        color: var(--leave);
+        border: 1px solid #e2b6b0;
+      }
+
+      .ghost {
+        background: transparent;
+        color: var(--ink);
+        border: 1px solid var(--line);
+      }
+
+      .status {
+        margin-top: 18px;
+        padding: 14px 16px;
+        border-radius: 14px;
+        background: #f6f0e6;
+        min-height: 58px;
+      }
+
+      .status b {
+        display: block;
+        font-size: 13px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+
+      .status.ok {
+        background: #e7f2ea;
+        color: var(--ok);
+      }
+
+      .status.wait {
+        background: #f7eed8;
+        color: var(--wait);
+      }
+
+      .status.bad {
+        background: #f8e7e4;
+        color: var(--bad);
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .actions[hidden] {
+        display: none;
+      }
+
+      .empty {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .line {
+        display: grid;
+        grid-template-columns: 72px 1fr;
+        gap: 10px;
+        padding: 8px 0;
+        border-top: 1px solid var(--line);
+        font-size: 14px;
+      }
+
+      .line time {
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .line strong {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .divider {
+        height: 1px;
+        background: var(--line);
+        margin: 18px 0;
+      }
+
+      .faq {
+        padding: 12px 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .faq:first-of-type {
+        border-top: 0;
+      }
+
+      .faq .q {
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+
+      .faq .a {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .faq-meta {
+        color: var(--muted);
+        font-size: 12px;
+        margin: 0 0 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Meeting bot</h1>
+        <div class="rec"><i></i> Recall.ai</div>
+      </header>
+
+      <section class="card">
+        <form id="join-form">
+          <label for="meeting-url">Meeting link</label>
+          <input
+            id="meeting-url"
+            name="meeting_url"
+            type="url"
+            placeholder="Paste a Google Meet, Zoom, or Teams URL"
+            autocomplete="off"
+            required
+          />
+          <div class="platforms">
+            <span data-platform="Google Meet">Google Meet</span>
+            <span data-platform="Zoom">Zoom</span>
+            <span data-platform="Microsoft Teams">Teams</span>
+          </div>
+          <div class="row">
+            <div>
+              <label for="bot-name">Bot name</label>
+              <input id="bot-name" name="bot_name" value="Transcription Bot" />
+            </div>
+            <div>
+              <label>&nbsp;</label>
+              <button class="join" id="join-btn" type="submit">Join meeting</button>
+            </div>
+          </div>
+        </form>
+
+        <div class="status" id="status">
+          <b>Status</b>
+          <div>Paste a meeting link to send the bot in.</div>
+        </div>
+        <div class="actions" id="actions" hidden>
+          <button class="leave" id="leave-btn" type="button">Leave meeting</button>
+        </div>
+
+        <div class="divider"></div>
+        <h2>Transcript</h2>
+        <div id="transcript" class="empty">It will show up here when the meeting ends.</div>
+
+        <div class="divider"></div>
+        <h2>FAQs</h2>
+        <p class="faq-meta" id="faq-meta" hidden></p>
+        <div id="faqs" class="empty">FAQs will appear here after the transcript is ready.</div>
+      </section>
+    </main>
+
+    <script>
+      const form = document.getElementById("join-form");
+      const urlInput = document.getElementById("meeting-url");
+      const nameInput = document.getElementById("bot-name");
+      const joinBtn = document.getElementById("join-btn");
+      const leaveBtn = document.getElementById("leave-btn");
+      const statusEl = document.getElementById("status");
+      const actionsEl = document.getElementById("actions");
+      const transcriptEl = document.getElementById("transcript");
+      const faqsEl = document.getElementById("faqs");
+      const faqMetaEl = document.getElementById("faq-meta");
+      const chips = [...document.querySelectorAll(".platforms span")];
+
+      let botId = null;
+      let timer = null;
+
+      const platformOf = (value) => {
+        if (/meet\.google\.com/i.test(value)) return "Google Meet";
+        if (/zoom\.us|zoom\.com/i.test(value)) return "Zoom";
+        if (/teams\.microsoft\.com|teams\.live\.com/i.test(value)) return "Microsoft Teams";
+        return null;
+      };
+
+      const setStatus = (text, kind) => {
+        statusEl.className = "status" + (kind ? " " + kind : "");
+        statusEl.innerHTML = "<b>Status</b><div></div>";
+        statusEl.lastChild.textContent = text;
+      };
+
+      const escapeHtml = (value) =>
+        String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+
+      const renderTranscript = (transcript) => {
+        if (!transcript || !transcript.entries || !transcript.entries.length) {
+          transcriptEl.className = "empty";
+          transcriptEl.textContent = transcript ? transcript.text : "It will show up here when the meeting ends.";
+          return;
+        }
+        transcriptEl.className = "";
+        transcriptEl.innerHTML = transcript.entries
+          .map(
+            (row) =>
+              `<div class="line"><time>${row.time}</time><div><strong>${escapeHtml(
+                row.speaker
+              )}</strong>${escapeHtml(row.text)}</div></div>`
+          )
+          .join("");
+      };
+
+      const renderFaqs = (faqs) => {
+        if (!faqs) {
+          faqMetaEl.hidden = true;
+          faqsEl.className = "empty";
+          faqsEl.textContent = "FAQs will appear here after the transcript is ready.";
+          return;
+        }
+        const items = faqs.items || [];
+        if (faqs.method === "openai") {
+          faqMetaEl.textContent = "Polished FAQ questions from the transcript";
+        } else if (faqs.error) {
+          faqMetaEl.textContent = faqs.error;
+        } else {
+          faqMetaEl.textContent = "";
+        }
+        faqMetaEl.hidden = !faqMetaEl.textContent;
+        if (!items.length) {
+          faqsEl.className = "empty";
+          faqsEl.textContent = "No FAQs found in this transcript.";
+          return;
+        }
+        faqsEl.className = "";
+        faqsEl.innerHTML = items
+          .map(
+            (item) =>
+              `<div class="faq"><div class="q">${escapeHtml(item.question)}</div><div class="a">${escapeHtml(
+                item.answer
+              )}</div></div>`
+          )
+          .join("");
+      };
+
+      const inCall = (status) =>
+        [
+          "joining_call",
+          "in_waiting_room",
+          "in_call_not_recording",
+          "recording_permission_allowed",
+          "recording_permission_denied",
+          "in_call_recording",
+        ].includes(status);
+
+      urlInput.addEventListener("input", () => {
+        const platform = platformOf(urlInput.value);
+        chips.forEach((chip) => chip.classList.toggle("on", chip.dataset.platform === platform));
+      });
+
+      const stopPolling = () => {
+        if (timer) {
+          clearInterval(timer);
+          timer = null;
+        }
+      };
+
+      const applySession = (data) => {
+        if (data.error && !data.status) {
+          setStatus(data.error, "bad");
+          actionsEl.hidden = true;
+          joinBtn.disabled = false;
+          stopPolling();
+          return;
+        }
+        const kind = data.status === "fatal" || data.error ? "bad" : data.status === "done" ? "ok" : "wait";
+        setStatus(data.error || data.hint || "Working...", kind);
+        actionsEl.hidden = !inCall(data.status);
+        if (data.transcript) renderTranscript(data.transcript);
+        if (data.faqs) {
+          renderFaqs(data.faqs);
+        } else if (data.transcript && data.status === "done") {
+          faqMetaEl.hidden = false;
+          faqMetaEl.textContent = "Generating polished FAQs...";
+          faqsEl.className = "empty";
+          faqsEl.textContent = "Working on the FAQ section…";
+        }
+        if (data.status === "done" || data.status === "fatal") {
+          joinBtn.disabled = false;
+          const faqsSettled =
+            data.status === "fatal" ||
+            data.error ||
+            (data.faqs && ((data.faqs.items && data.faqs.items.length) || data.faqs.error));
+          if (faqsSettled || !data.transcript) stopPolling();
+        }
+      };
+
+      const poll = async () => {
+        if (!botId) return;
+        const res = await fetch("/api/bots/" + botId);
+        const data = await res.json();
+        applySession(data);
+      };
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const meetingUrl = urlInput.value.trim();
+        if (!platformOf(meetingUrl)) {
+          setStatus("Use a Google Meet, Zoom, or Microsoft Teams link.", "bad");
+          return;
+        }
+        stopPolling();
+        botId = null;
+        joinBtn.disabled = true;
+        actionsEl.hidden = true;
+        renderTranscript(null);
+        renderFaqs(null);
+        setStatus("Sending the bot into the meeting...", "wait");
+        try {
+          const res = await fetch("/api/join", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              meeting_url: meetingUrl,
+              bot_name: nameInput.value.trim() || "Transcription Bot",
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Could not join.");
+          botId = data.id;
+          applySession(data);
+          timer = setInterval(poll, 2000);
+        } catch (err) {
+          joinBtn.disabled = false;
+          setStatus(err.message, "bad");
+        }
+      });
+
+      leaveBtn.addEventListener("click", async () => {
+        if (!botId) return;
+        leaveBtn.disabled = true;
+        try {
+          const res = await fetch("/api/bots/" + botId + "/leave", { method: "POST" });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Could not leave.");
+          setStatus(data.hint, "wait");
+        } catch (err) {
+          setStatus(err.message, "bad");
+        } finally {
+          leaveBtn.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,2 @@
+# This app uses the Python standard library only.
+# Kept so deploy platforms and Docker can run `pip install -r requirements.txt`.
